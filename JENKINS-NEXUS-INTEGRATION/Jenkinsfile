@@ -1,0 +1,124 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'java8'
+    }
+    environment {
+        NEXUS_VERSION = "nexus3"
+        NEXUS_PROTOCOL = "http"
+        NEXUS_URL = "18.221.1.205:8081"
+        NEXUS_REPOSITORY = "maven-central-repository"
+        NEXUS_CREDENTIAL_ID = "nexus-cred"
+    }
+    stages {
+        stage('INSTALL MAVEN'){
+            steps {
+                sh 'java -version'
+                sh 'sudo apt-get install maven -y'
+            }
+        }
+        stage("Clone code from GitHub") {
+            steps {
+                script {
+                    checkout scmGit(branches: [[name: 'main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/JAGANNATHDEVOPS/project-sonarqube.git']])
+                }
+            }
+        }
+        stage("List the directory") {
+            steps {
+                script {
+                    sh 'ls -l';
+                    sh 'pwd';
+                    sh 'whoami'
+                    sh 'who am i'
+                    
+                }
+            }
+        }
+        stage("Maven CLEAN") {
+            steps {
+                dir('addressbook/addressbook_main'){
+                    script {
+                    sh "mvn clean"
+                    }
+                }
+            }
+        }
+        stage("Maven VALIDATE") {
+            steps {
+                dir('addressbook/addressbook_main'){
+                    script {
+                    sh "mvn validate"
+                    }
+                }
+            }
+        }
+         stage("Maven COMPILE") {
+            steps {
+                dir('addressbook/addressbook_main'){
+                    script {
+                    sh "mvn compile"
+                    }
+                }
+            }
+        }
+        stage("Maven TEST") {
+            steps {
+                dir('addressbook/addressbook_main'){
+                    script {
+                    sh "mvn test"
+                    }
+                }
+            }
+        }
+         stage("Maven PACKAGE") {
+            steps {
+                dir('addressbook/addressbook_main'){
+                    script {
+                    sh "mvn package"
+                    }
+                }
+            }
+        }
+        stage("Publish to Nexus Repository Manager") {
+            steps {
+                dir('addressbook/addressbook_main')
+                {
+                script {
+                    sh 'pwd'
+                    sh 'ls -la'
+                    pom = readMavenPom file: "pom.xml";
+                    filesByGlob = findFiles(glob: "target/*.${pom.packaging}");
+                    echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
+                    artifactPath = filesByGlob[0].path;
+                    artifactExists = fileExists artifactPath;
+                    if(artifactExists) {
+                        echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version}";
+                        nexusArtifactUploader(
+                            nexusVersion: "nexus3",
+                            protocol: "http",
+                            nexusUrl: "18.221.1.205:8081",
+                            groupId: "pom.com.edurekademo.tutorial",
+                            version: "pom.2.0",
+                            repository: NEXUS_REPOSITORY,
+                            credentialsId: NEXUS_CREDENTIAL_ID,
+                            artifacts: [
+                                [artifactId: "pom.addressbook_main",
+                                classifier: '',
+                                file: artifactPath,
+                                type: pom.packaging],
+                                [artifactId: "pom.addressbook_main",
+                                classifier: '',
+                                file: "pom.xml",
+                                type: "pom"]
+                            ]
+                        );
+                    } else {
+                        error "*** File: ${artifactPath}, could not be found";
+                    }
+                }
+                }
+            }
+        }
+    }
+}
