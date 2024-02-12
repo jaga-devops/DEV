@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+    stages {
+        stage('CLONE THE REPO FOR INSTALLING ANSIBLE'){
+            steps {
+                script {
+                    checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/JAGANNATHDEVOPS/SHELL-SCRIPT-TUTORIAL.git']])
+                    sh "ls -l"
+                }
+            }
+        }
+         stage('INSTALL ANSIBLE'){
+            steps {
+                script {
+                    sh "./script-to-install-ansible-in-amazon-linux-ubuntu.sh"
+                }
+            }
+        }
+        stage('CLONE THE REPO FOR INSTALLING TERRAFORM'){
+            steps {
+                script {
+                    checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/JAGANNATHDEVOPS/TERRAFORM-INSTALATION.git']])
+                    sh "ls -l"
+                }
+            }
+        }
+         stage('INSTALL TERRAFORM'){
+            steps {
+                script {
+                    sh " ansible-playbook ter.yml"
+                    sh "terraform --version"
+                }
+            }
+        }
+    }
+}
